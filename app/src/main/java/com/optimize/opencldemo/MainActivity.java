@@ -16,7 +16,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ReadPlatform();
+        ReadDevices();
     }
 
     public native void ReadPlatform();
+    public native void ReadDevices();
 }

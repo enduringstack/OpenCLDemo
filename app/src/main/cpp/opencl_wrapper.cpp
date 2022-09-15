@@ -583,39 +583,97 @@ Java_com_optimize_opencldemo_MainActivity_ReadPlatform(JNIEnv *env, jobject thiz
     cl_int ret;
     cl_uint numPlatform;
     cl_platform_id *platform;
-    ret = OpenCLLib::GetInstance()->clGetPlatformIDs(0, nullptr, &numPlatform);
+    ret = clGetPlatformIDs(0, nullptr, &numPlatform);
     LOGI("num platform: %d", numPlatform);
     platform = (cl_platform_id*) malloc(sizeof(cl_platform_id) * numPlatform);
-    ret = OpenCLLib::GetInstance()->clGetPlatformIDs(numPlatform, platform, nullptr);
+    ret = clGetPlatformIDs(numPlatform, platform, nullptr);
 
     size_t size;
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_NAME, 0, nullptr, &size);
+    ret = clGetPlatformInfo(*platform, CL_PLATFORM_NAME, 0, nullptr, &size);
     char* pName = (char*) malloc(size);
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_NAME, size, pName, nullptr);
+    ret = clGetPlatformInfo(*platform, CL_PLATFORM_NAME, size, pName, nullptr);
     LOGI("platform name: %s", pName);
 
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_VENDOR, 0, nullptr, &size);
+    ret = clGetPlatformInfo(*platform, CL_PLATFORM_VENDOR, 0, nullptr, &size);
     char* pVendor = (char*) malloc(size);
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_VENDOR, size, pVendor, nullptr);
+    ret = clGetPlatformInfo(*platform, CL_PLATFORM_VENDOR, size, pVendor, nullptr);
     LOGI("vendor name: %s", pVendor);
 
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_VERSION, 0, nullptr, &size);
+    ret = clGetPlatformInfo(*platform, CL_PLATFORM_VERSION, 0, nullptr, &size);
     char* pVersion = (char*) malloc(size);
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_VERSION, size, pVersion, nullptr);
+    ret = clGetPlatformInfo(*platform, CL_PLATFORM_VERSION, size, pVersion, nullptr);
     LOGI("platform version: %s", pVersion);
 
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_PROFILE, 0, nullptr, &size);
+    ret = clGetPlatformInfo(*platform, CL_PLATFORM_PROFILE, 0, nullptr, &size);
     char* pProfile = (char*) malloc(size);
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_PROFILE, size, pProfile, nullptr);
+    ret = clGetPlatformInfo(*platform, CL_PLATFORM_PROFILE, size, pProfile, nullptr);
     LOGI("platform profile: %s", pProfile);
 
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_EXTENSIONS, 0, nullptr, &size);
+    ret = clGetPlatformInfo(*platform, CL_PLATFORM_EXTENSIONS, 0, nullptr, &size);
     char* pExtensions = (char*) malloc(size);
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_EXTENSIONS, size, pExtensions, nullptr);
+    ret = clGetPlatformInfo(*platform, CL_PLATFORM_EXTENSIONS, size, pExtensions, nullptr);
     LOGI("platform extensions: %s", pExtensions);
 
     free(pName);
     free(pVendor);
     free(pProfile);
     free(pExtensions);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_optimize_opencldemo_MainActivity_ReadDevices(JNIEnv *env, jobject thiz) {
+    cl_device_id *device;
+    cl_platform_id platform;
+    cl_int err;
+    cl_uint numDevice;
+
+    err = clGetPlatformIDs(1, &platform, nullptr);
+    err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, nullptr, &numDevice);
+    LOGI("CL_DEVICE_TYPE_GPU numDevices:%d", numDevice);
+
+    device = static_cast<cl_device_id *>(malloc(sizeof(cl_device_id) * numDevice));
+    err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, numDevice, device,
+                                                   nullptr);
+
+    for (int i = 0; i < numDevice; ++i) {
+        char buffer[100];
+        err = clGetDeviceInfo(device[i], CL_DEVICE_NAME, 100, buffer, nullptr);
+        LOGI("device name: %s", buffer);
+
+        cl_uint unitNum;
+        err = clGetDeviceInfo(device[i], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &unitNum,
+                              nullptr);
+        LOGI("compute unit number: %d.", unitNum);
+
+        cl_uint frequency;
+        err = clGetDeviceInfo(device[i], CL_DEVICE_MAX_CLOCK_FREQUENCY, sizeof(cl_uint), &frequency,
+                              nullptr);
+        LOGI("device frequency: %d(MHz).", frequency);
+
+        cl_ulong globalSize;
+        err = clGetDeviceInfo(device[i], CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &globalSize,
+                              nullptr);
+        LOGI("device global size: %0.0lu(MB)", globalSize/ 1024 / 1024);
+
+        cl_uint globalCacheLine;
+        err = clGetDeviceInfo(device[i], CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE, sizeof(cl_uint), &globalCacheLine,
+                              nullptr);
+        LOGI("device global cache line: %d(Byte).", globalCacheLine);
+
+        char deviceVersion[100];
+        err = clGetDeviceInfo(device[i], CL_DEVICE_VERSION, 100, deviceVersion, nullptr);
+        LOGI("device version: %s", deviceVersion);
+
+        char* deviceExtensions;
+        size_t extenNum;
+        err = clGetDeviceInfo(device[i], CL_DEVICE_EXTENSIONS, 0, nullptr, &extenNum);
+
+        deviceExtensions = static_cast<char *>(malloc(extenNum));
+        err = clGetDeviceInfo(device[i], CL_DEVICE_EXTENSIONS, extenNum, deviceExtensions, nullptr);
+        LOGI("device extensions: %s", deviceExtensions);
+        free(deviceExtensions);
+    }
+
+    free(device);
 }
