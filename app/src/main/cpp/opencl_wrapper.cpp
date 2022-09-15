@@ -140,55 +140,6 @@ bool OpenCLLib::LoadLibraryFromPath() {
 }
 
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_optimize_opencldemo_MainActivity_stringFromJNI(
-        JNIEnv *env,
-        jobject /* this */) {
-    std::string hello = "Hello from C++";
-    OpenCLLib::GetInstance()->LoadOpenCLLibrary();
-
-    cl_int ret;
-    cl_uint numPlatform;
-    cl_platform_id *platform;
-    ret = OpenCLLib::GetInstance()->clGetPlatformIDs(0, nullptr, &numPlatform);
-    LOGI("num platform: %d", numPlatform);
-    platform = (cl_platform_id*) malloc(sizeof(cl_platform_id) * numPlatform);
-    ret = OpenCLLib::GetInstance()->clGetPlatformIDs(numPlatform, platform, nullptr);
-
-    size_t size;
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_NAME, 0, nullptr, &size);
-    char* pName = (char*) malloc(size);
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_NAME, size, pName, nullptr);
-    LOGI("platform name: %s", pName);
-
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_VENDOR, 0, nullptr, &size);
-    char* pVendor = (char*) malloc(size);
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_VENDOR, size, pVendor, nullptr);
-    LOGI("vendor name: %s", pVendor);
-
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_VERSION, 0, nullptr, &size);
-    char* pVersion = (char*) malloc(size);
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_VERSION, size, pVersion, nullptr);
-    LOGI("platform version: %s", pVersion);
-
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_PROFILE, 0, nullptr, &size);
-    char* pProfile = (char*) malloc(size);
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_PROFILE, size, pProfile, nullptr);
-    LOGI("platform profile: %s", pProfile);
-
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_EXTENSIONS, 0, nullptr, &size);
-    char* pExtensions = (char*) malloc(size);
-    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_EXTENSIONS, size, pExtensions, nullptr);
-    LOGI("platform extensions: %s", pExtensions);
-
-    free(pName);
-    free(pVendor);
-    free(pProfile);
-    free(pExtensions);
-
-    return env->NewStringUTF(hello.c_str());
-}
-
 // clGetPlatformIDs wrapper, use OpenCLSymbols function. use OpenCLSymbols function.
 cl_int CL_API_CALL clGetPlatformIDs(cl_uint num_entries, cl_platform_id *platforms, cl_uint *num_platforms) {
     auto func = OpenCLLib::GetInstance()->clGetPlatformIDs;
@@ -624,3 +575,47 @@ void *CL_API_CALL clGetExtensionFunctionAddress(const char *func_name) {
 #endif
 
 
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_optimize_opencldemo_MainActivity_ReadPlatform(JNIEnv *env, jobject thiz) {
+    OpenCLLib::GetInstance()->LoadOpenCLLibrary();
+
+    cl_int ret;
+    cl_uint numPlatform;
+    cl_platform_id *platform;
+    ret = OpenCLLib::GetInstance()->clGetPlatformIDs(0, nullptr, &numPlatform);
+    LOGI("num platform: %d", numPlatform);
+    platform = (cl_platform_id*) malloc(sizeof(cl_platform_id) * numPlatform);
+    ret = OpenCLLib::GetInstance()->clGetPlatformIDs(numPlatform, platform, nullptr);
+
+    size_t size;
+    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_NAME, 0, nullptr, &size);
+    char* pName = (char*) malloc(size);
+    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_NAME, size, pName, nullptr);
+    LOGI("platform name: %s", pName);
+
+    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_VENDOR, 0, nullptr, &size);
+    char* pVendor = (char*) malloc(size);
+    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_VENDOR, size, pVendor, nullptr);
+    LOGI("vendor name: %s", pVendor);
+
+    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_VERSION, 0, nullptr, &size);
+    char* pVersion = (char*) malloc(size);
+    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_VERSION, size, pVersion, nullptr);
+    LOGI("platform version: %s", pVersion);
+
+    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_PROFILE, 0, nullptr, &size);
+    char* pProfile = (char*) malloc(size);
+    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_PROFILE, size, pProfile, nullptr);
+    LOGI("platform profile: %s", pProfile);
+
+    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_EXTENSIONS, 0, nullptr, &size);
+    char* pExtensions = (char*) malloc(size);
+    ret = OpenCLLib::GetInstance()->clGetPlatformInfo(*platform, CL_PLATFORM_EXTENSIONS, size, pExtensions, nullptr);
+    LOGI("platform extensions: %s", pExtensions);
+
+    free(pName);
+    free(pVendor);
+    free(pProfile);
+    free(pExtensions);
+}
