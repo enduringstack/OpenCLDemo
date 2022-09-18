@@ -17,8 +17,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ReadPlatform();
         ReadDevices();
+        CreateContext();
     }
 
     public native void ReadPlatform();
     public native void ReadDevices();
+    public native void CreateContext();
 }

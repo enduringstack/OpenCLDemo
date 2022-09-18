@@ -677,3 +677,39 @@ Java_com_optimize_opencldemo_MainActivity_ReadDevices(JNIEnv *env, jobject thiz)
 
     free(device);
 }
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_optimize_opencldemo_MainActivity_CreateContext(JNIEnv *env, jobject thiz) {
+//    cl_device_id *device;
+    cl_platform_id platform;
+
+    cl_int err;
+    cl_uint numDevice;
+    err = clGetPlatformIDs(1, &platform, nullptr);
+//    err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, nullptr, &numDevice);
+//    device = static_cast<cl_device_id *>(malloc(sizeof(cl_device_id) * numDevice));
+//    err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, numDevice, device, nullptr);
+    cl_context_properties  properties[] = {CL_CONTEXT_PLATFORM,
+                                           reinterpret_cast<cl_context_properties>(platform), 0};
+//    cl_context context = clCreateContext(properties, numDevice, device, nullptr, nullptr, &err);
+//    cl_context context = clCreateContextFromType(properties, CL_DEVICE_TYPE_GPU, nullptr, nullptr, &err);
+
+    cl_context context = clCreateContextFromType(properties, CL_DEVICE_TYPE_ALL, nullptr, nullptr, &err);
+    numDevice = 0;
+    size_t deviceSize;
+    err = clGetContextInfo(context, CL_CONTEXT_NUM_DEVICES, sizeof(cl_uint), &numDevice, nullptr);
+    LOGI("number of device in context: %d", numDevice);
+    cl_uint referenceCount;
+    err = clGetContextInfo(context, CL_CONTEXT_REFERENCE_COUNT, sizeof(cl_uint), &referenceCount, nullptr);
+    LOGI("reference count in context: %d", referenceCount);
+    err = clRetainContext(context);
+    err = clGetContextInfo(context, CL_CONTEXT_REFERENCE_COUNT, sizeof(cl_uint), &referenceCount, nullptr);
+    LOGI("reference count in context: %d", referenceCount);
+    err = clRetainContext(context);
+    err = clGetContextInfo(context, CL_CONTEXT_REFERENCE_COUNT, sizeof(cl_uint), &referenceCount, nullptr);
+    LOGI("reference count in context: %d", referenceCount);
+
+    err = clReleaseContext(context);
+    err = clGetContextInfo(context, CL_CONTEXT_REFERENCE_COUNT, sizeof(cl_uint), &referenceCount, nullptr);
+    LOGI("reference count in context: %d", referenceCount);
+}
