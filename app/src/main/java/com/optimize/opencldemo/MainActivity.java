@@ -18,9 +18,11 @@ public class MainActivity extends AppCompatActivity {
         ReadPlatform();
         ReadDevices();
         CreateContext();
+        CreateCommandQueue();
     }
 
     public native void ReadPlatform();
     public native void ReadDevices();
     public native void CreateContext();
+    public native void CreateCommandQueue();
 }
