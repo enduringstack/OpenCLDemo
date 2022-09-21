@@ -11,7 +11,8 @@ add_library(
 
         SHARED
 
-        src/main/cpp/opencl_wrapper.cpp)
+        src/main/cpp/opencl_wrapper.cpp
+        src/main/cpp/opencl_add_kernel.cl)
 
 find_library(
         log-lib
