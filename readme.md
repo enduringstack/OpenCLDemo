@@ -1,0 +1,1 @@
+my opencl exercise on mali and adreno gpu series.
