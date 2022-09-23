@@ -843,3 +843,26 @@ Java_com_optimize_opencldemo_MainActivity_CreateCommandQueue(JNIEnv *env, jobjec
     err = clGetCommandQueueInfo(commandQueue, CL_QUEUE_REFERENCE_COUNT, sizeof(cl_uint), &referenceCount, nullptr);
     LOGI("reference count in command queue: %d", referenceCount);
 }
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_optimize_opencldemo_MainActivity_CreateProgram(JNIEnv *env, jobject thiz) {
+    cl_platform_id platform;
+    cl_int err;
+    err = clGetPlatformIDs(1, &platform, nullptr);
+    cl_context_properties properties[] = {CL_CONTEXT_PLATFORM,
+                                          reinterpret_cast<cl_context_properties>(platform), 0};
+
+    err = clGetPlatformIDs(1, &platform, nullptr);
+    cl_uint numDevice;
+    err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, nullptr, &numDevice);
+    LOGI("CL_DEVICE_TYPE_GPU numDevices:%d", numDevice);
+    cl_device_id *device;
+    device = static_cast<cl_device_id *>(malloc(sizeof(cl_device_id) * numDevice));
+    err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, numDevice, device,
+                         nullptr);
+
+    cl_context context = clCreateContextFromType(properties, CL_DEVICE_TYPE_ALL, nullptr, nullptr,
+                                                 &err);
+
+
+}
