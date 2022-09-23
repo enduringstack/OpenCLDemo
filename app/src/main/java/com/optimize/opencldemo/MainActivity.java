@@ -65,10 +65,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         AssetManager assetManager = getAssets();
-        File dir = getDir("models", Context.MODE_PRIVATE);
+        File dir = getDir("clkernels", Context.MODE_PRIVATE);
         String path = dir.getAbsolutePath() + File.separator;
         Log.e(TAG, "OpenCL kernel file path: " + path);
-        copyCLFilesToAppDir(assetManager, "opencl_add_kernel.cl", path); // /data/user/0/com.optimize.opencldemo/app_models/
+        copyCLFilesToAppDir(assetManager, "opencl_add_kernel.cl", path); // /data/user/0/com.optimize.opencldemo/app_clkernels/
 
         ReadPlatform();
         ReadDevices();
