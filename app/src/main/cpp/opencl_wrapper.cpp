@@ -4,6 +4,7 @@
 #include <android/log.h>
 #include <mutex>
 #include <dlfcn.h>
+#include <fstream>
 #include <memory>
 #include "opencl_wrapper.h"
 
@@ -864,16 +865,13 @@ Java_com_optimize_opencldemo_MainActivity_CreateProgram(JNIEnv *env, jobject thi
     cl_context context = clCreateContextFromType(properties, CL_DEVICE_TYPE_ALL, nullptr, nullptr,
                                                  &err);
 
-    FILE *programHandle = fopen("/data/user/0/com.optimize.opencldemo/app_clkernels/opencl_add_kernel.cl", "r");
-    fseek(programHandle, 0, SEEK_END);
-    long programSize = ftell(programHandle);
-    rewind(programHandle);
-    char* programBuffer = static_cast<char *>(malloc(programSize + 1));
-    fread(programBuffer, sizeof(char), programSize, programHandle);
-    programBuffer[programSize] = '\0';
+    std::ifstream clFile{"/data/user/0/com.optimize.opencldemo/app_clkernels/opencl_add_kernel.cl"};
+    std::string clProgram;
 
-    clCreateProgramWithSource(context, 1, reinterpret_cast<const char **>(programBuffer),
-                              reinterpret_cast<const size_t *>(programSize), &err);
-    fclose(programHandle);
-    free(programBuffer);
+    clProgram.assign(std::istream_iterator<char>(clFile), std::istream_iterator<char>());
+    const char* strProgram = clProgram.c_str();
+    size_t lengthProgram = clProgram.size();
+
+
+    clCreateProgramWithSource(context, 1, &strProgram, &lengthProgram, &err);
 }
