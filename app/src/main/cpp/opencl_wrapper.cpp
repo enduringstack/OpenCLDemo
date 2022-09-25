@@ -823,7 +823,8 @@ Java_com_optimize_opencldemo_MainActivity_CreateCommandQueue(JNIEnv *env, jobjec
     cl_queue_properties props[] = {CL_QUEUE_PROPERTIES,
                                    CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_ON_DEVICE |
                                    CL_QUEUE_ON_DEVICE_DEFAULT, 0};
-    cl_command_queue commandQueue = clCreateCommandQueueWithProperties(context, *device, props, &err);
+    cl_command_queue commandQueue = clCreateCommandQueueWithProperties(context, *device, props,
+                                                                       &err);
 
     cl_uint queueSize = 0;
     LOGI("command queue size: %d", queueSize);
@@ -831,17 +832,21 @@ Java_com_optimize_opencldemo_MainActivity_CreateCommandQueue(JNIEnv *env, jobjec
     LOGI("command queue size: %d", queueSize);
 
     cl_uint referenceCount;
-    err = clGetCommandQueueInfo(commandQueue, CL_QUEUE_REFERENCE_COUNT, sizeof(cl_uint), &referenceCount, nullptr);
+    err = clGetCommandQueueInfo(commandQueue, CL_QUEUE_REFERENCE_COUNT, sizeof(cl_uint),
+                                &referenceCount, nullptr);
     LOGI("reference count in command queue: %d", referenceCount);
     err = clRetainCommandQueue(commandQueue);
-    err = clGetCommandQueueInfo(commandQueue, CL_QUEUE_REFERENCE_COUNT, sizeof(cl_uint), &referenceCount, nullptr);
+    err = clGetCommandQueueInfo(commandQueue, CL_QUEUE_REFERENCE_COUNT, sizeof(cl_uint),
+                                &referenceCount, nullptr);
     LOGI("reference count in command queue: %d", referenceCount);
     referenceCount = clRetainCommandQueue(commandQueue);
-    err = clGetCommandQueueInfo(commandQueue, CL_QUEUE_REFERENCE_COUNT, sizeof(cl_uint), &referenceCount, nullptr);
+    err = clGetCommandQueueInfo(commandQueue, CL_QUEUE_REFERENCE_COUNT, sizeof(cl_uint),
+                                &referenceCount, nullptr);
     LOGI("reference count in command queue: %d", referenceCount);
 
     err = clReleaseCommandQueue(commandQueue);
-    err = clGetCommandQueueInfo(commandQueue, CL_QUEUE_REFERENCE_COUNT, sizeof(cl_uint), &referenceCount, nullptr);
+    err = clGetCommandQueueInfo(commandQueue, CL_QUEUE_REFERENCE_COUNT, sizeof(cl_uint),
+                                &referenceCount, nullptr);
     LOGI("reference count in command queue: %d", referenceCount);
 }
 extern "C"
@@ -866,12 +871,40 @@ Java_com_optimize_opencldemo_MainActivity_CreateProgram(JNIEnv *env, jobject thi
                                                  &err);
 
     std::ifstream clFile{"/data/user/0/com.optimize.opencldemo/app_clkernels/opencl_add_kernel.cl"};
+    std::ifstream clHeaderFile{"/data/user/0/com.optimize.opencldemo/app_clkernels/opencl_add_kernel.h"};
     std::string clProgram;
 
     clProgram.assign(std::istream_iterator<char>(clFile), std::istream_iterator<char>());
-    const char* strProgram = clProgram.c_str();
+    const char *strProgram = clProgram.c_str();
     size_t lengthProgram = clProgram.size();
+    cl_program kernelClProgram = clCreateProgramWithSource(context, 1, &strProgram, &lengthProgram, &err);
 
+//    clProgram.clear();
+//    clProgram.assign(std::istream_iterator<char>(clHeaderFile), std::istream_iterator<char>());
+//    const char *strHeaderProgram = clProgram.c_str();
+//    size_t lengthHeaderProgram = clProgram.size();
+//    cl_program headerClProgram = clCreateProgramWithSource(context, 1, &strHeaderProgram, &lengthHeaderProgram, &err);
+//
+//    const char* inputHeaderNames[1] = {"/data/user/0/com.optimize.opencldemo/app_clkernels/opencl_add_kernel.h"};
+//    cl_program inputHead[1] = {headerClProgram};
+//    err = clCompileProgram(kernelClProgram, 0, nullptr, nullptr, 1, inputHead, inputHeaderNames, nullptr,
+//                           nullptr);
+//    cl_program program = clLinkProgram(context, numDevice, device, nullptr, 1, &kernelClProgram,
+//                                       nullptr, nullptr, &err);
 
-    clCreateProgramWithSource(context, 1, &strProgram, &lengthProgram, &err);
+    const char options[] = "-cl-std=CL2.0 -cl-mad-enable -Werror";
+    err = clBuildProgram(kernelClProgram, 1, device, options, nullptr, nullptr);
+    if (err != CL_SUCCESS) {
+        LOGE("build program fail.");
+        char* buffer;
+        size_t logsize;
+        err = clGetProgramBuildInfo(kernelClProgram, *device, CL_PROGRAM_BUILD_LOG, 0, nullptr, &logsize);
+        buffer = static_cast<char *>(malloc(logsize * sizeof(char)));
+        err = clGetProgramBuildInfo(kernelClProgram, *device, CL_PROGRAM_BUILD_LOG, logsize, buffer,
+                                    nullptr);
+        LOGE("build program error log: %s", buffer);
+        free(buffer);
+    }
+
+    LOGE("build program success.");
 }

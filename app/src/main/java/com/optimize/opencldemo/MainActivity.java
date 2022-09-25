@@ -68,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
         File dir = getDir("clkernels", Context.MODE_PRIVATE);
         String path = dir.getAbsolutePath() + File.separator;
         Log.e(TAG, "OpenCL kernel file path: " + path);
+        copyCLFilesToAppDir(assetManager, "opencl_add_kernel.h", path);
         copyCLFilesToAppDir(assetManager, "opencl_add_kernel.cl", path); // /data/user/0/com.optimize.opencldemo/app_clkernels/
 
         ReadPlatform();

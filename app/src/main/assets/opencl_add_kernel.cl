@@ -1,7 +1,4 @@
-#include "add.h"
-
-__kernel void call_test(global float* A, const float b)
+__kernel void call_test(global const float* A, global const float* b, global float* result)
 {
     int index = get_global_id(0);
-    A[index] = add(A[index], b);
 }
