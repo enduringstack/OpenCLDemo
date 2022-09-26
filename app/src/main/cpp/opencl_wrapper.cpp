@@ -849,58 +849,69 @@ Java_com_optimize_opencldemo_MainActivity_CreateCommandQueue(JNIEnv *env, jobjec
                                 &referenceCount, nullptr);
     LOGI("reference count in command queue: %d", referenceCount);
 }
+
+cl_context CreateContext(cl_device_id *p_device) {
+    cl_int err_num;
+    cl_uint num_platform;
+    cl_platform_id platform_id;
+    cl_context context = nullptr;
+    err_num = clGetPlatformIDs(1, &platform_id, &num_platform);
+    if (CL_SUCCESS != err_num || num_platform <= 0) {
+        LOGE("failed to find any opencl platform. \n");
+        return nullptr;
+    }
+    err_num = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, p_device, nullptr);
+    if (CL_SUCCESS != err_num) {
+        LOGE("there is no gpu.\n");
+        return nullptr;
+    }
+    context = clCreateContext(nullptr, 1, p_device, nullptr, nullptr, &err_num);
+    if (CL_SUCCESS != err_num) {
+        LOGE("create context error.\n");
+        return nullptr;
+    }
+    return context;
+}
+
+std::string ClReadString(const std::string &filename) {
+    std::ifstream fs(filename);
+    if (!fs.is_open()) {
+        LOGE("open %s fail.", filename.c_str());
+    }
+    return {(std::istreambuf_iterator<char>(fs)), std::istreambuf_iterator<char>()};
+}
+
+// refer to : https://github.com/mobile-algorithm-optimization/guide/blob/main/OpenCLGaussian/main.cpp
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_optimize_opencldemo_MainActivity_CreateProgram(JNIEnv *env, jobject thiz) {
-    cl_platform_id platform;
-    cl_int err;
-    err = clGetPlatformIDs(1, &platform, nullptr);
-    cl_context_properties properties[] = {CL_CONTEXT_PLATFORM,
-                                          reinterpret_cast<cl_context_properties>(platform), 0};
+    cl_device_id device;
+    cl_context context = CreateContext(&device);
+    if (nullptr == context) {
+        LOGE("Create Context Failed!");
+    }
 
-    err = clGetPlatformIDs(1, &platform, nullptr);
-    cl_uint numDevice;
-    err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, nullptr, &numDevice);
-    LOGI("CL_DEVICE_TYPE_GPU numDevices:%d", numDevice);
-    cl_device_id *device;
-    device = static_cast<cl_device_id *>(malloc(sizeof(cl_device_id) * numDevice));
-    err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, numDevice, device,
-                         nullptr);
 
-    cl_context context = clCreateContextFromType(properties, CL_DEVICE_TYPE_ALL, nullptr, nullptr,
-                                                 &err);
+    std::string source = ClReadString(
+            "/data/user/0/com.optimize.opencldemo/app_clkernels/opencl_add_kernel.cl");
 
-    std::ifstream clFile{"/data/user/0/com.optimize.opencldemo/app_clkernels/opencl_add_kernel.cl"};
-    std::ifstream clHeaderFile{"/data/user/0/com.optimize.opencldemo/app_clkernels/opencl_add_kernel.h"};
-    std::string clProgram;
+    char *cl_str = (char *) source.c_str();
+    size_t length = source.size();
 
-    clProgram.assign(std::istream_iterator<char>(clFile), std::istream_iterator<char>());
-    const char *strProgram = clProgram.c_str();
-    size_t lengthProgram = clProgram.size();
-    cl_program kernelClProgram = clCreateProgramWithSource(context, 1, &strProgram, &lengthProgram, &err);
+    cl_int err = CL_SUCCESS;
+    cl_program kernelClProgram = clCreateProgramWithSource(context, 1,
+                                                           (const char **)&cl_str, &length, &err);
 
-//    clProgram.clear();
-//    clProgram.assign(std::istream_iterator<char>(clHeaderFile), std::istream_iterator<char>());
-//    const char *strHeaderProgram = clProgram.c_str();
-//    size_t lengthHeaderProgram = clProgram.size();
-//    cl_program headerClProgram = clCreateProgramWithSource(context, 1, &strHeaderProgram, &lengthHeaderProgram, &err);
-//
-//    const char* inputHeaderNames[1] = {"/data/user/0/com.optimize.opencldemo/app_clkernels/opencl_add_kernel.h"};
-//    cl_program inputHead[1] = {headerClProgram};
-//    err = clCompileProgram(kernelClProgram, 0, nullptr, nullptr, 1, inputHead, inputHeaderNames, nullptr,
-//                           nullptr);
-//    cl_program program = clLinkProgram(context, numDevice, device, nullptr, 1, &kernelClProgram,
-//                                       nullptr, nullptr, &err);
-
-    const char options[] = "-cl-std=CL2.0 -cl-mad-enable -Werror";
-    err = clBuildProgram(kernelClProgram, 1, device, options, nullptr, nullptr);
+    const char options[] = "";
+    err = clBuildProgram(kernelClProgram, 1, &device, nullptr, nullptr, nullptr);
     if (err != CL_SUCCESS) {
         LOGE("build program fail.");
-        char* buffer;
+        char *buffer;
         size_t logsize;
-        err = clGetProgramBuildInfo(kernelClProgram, *device, CL_PROGRAM_BUILD_LOG, 0, nullptr, &logsize);
+        err = clGetProgramBuildInfo(kernelClProgram, device, CL_PROGRAM_BUILD_LOG, 0, nullptr,
+                                    &logsize);
         buffer = static_cast<char *>(malloc(logsize * sizeof(char)));
-        err = clGetProgramBuildInfo(kernelClProgram, *device, CL_PROGRAM_BUILD_LOG, logsize, buffer,
+        err = clGetProgramBuildInfo(kernelClProgram, device, CL_PROGRAM_BUILD_LOG, logsize, buffer,
                                     nullptr);
         LOGE("build program error log: %s", buffer);
         free(buffer);
