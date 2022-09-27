@@ -851,22 +851,22 @@ Java_com_optimize_opencldemo_MainActivity_CreateCommandQueue(JNIEnv *env, jobjec
 }
 
 cl_context CreateContext(cl_device_id *p_device) {
-    cl_int err_num;
+    cl_int err;
     cl_uint num_platform;
     cl_platform_id platform_id;
     cl_context context = nullptr;
-    err_num = clGetPlatformIDs(1, &platform_id, &num_platform);
-    if (CL_SUCCESS != err_num || num_platform <= 0) {
+    err = clGetPlatformIDs(1, &platform_id, &num_platform);
+    if (CL_SUCCESS != err || num_platform <= 0) {
         LOGE("failed to find any opencl platform. \n");
         return nullptr;
     }
-    err_num = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, p_device, nullptr);
-    if (CL_SUCCESS != err_num) {
+    err = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, p_device, nullptr);
+    if (CL_SUCCESS != err) {
         LOGE("there is no gpu.\n");
         return nullptr;
     }
-    context = clCreateContext(nullptr, 1, p_device, nullptr, nullptr, &err_num);
-    if (CL_SUCCESS != err_num) {
+    context = clCreateContext(nullptr, 1, p_device, nullptr, nullptr, &err);
+    if (CL_SUCCESS != err) {
         LOGE("create context error.\n");
         return nullptr;
     }
@@ -900,7 +900,7 @@ Java_com_optimize_opencldemo_MainActivity_CreateProgram(JNIEnv *env, jobject thi
 
     cl_int err = CL_SUCCESS;
     cl_program kernelClProgram = clCreateProgramWithSource(context, 1,
-                                                           (const char **)&cl_str, &length, &err);
+                                                           (const char **) &cl_str, &length, &err);
 
     const char options[] = "";
     err = clBuildProgram(kernelClProgram, 1, &device, nullptr, nullptr, nullptr);
@@ -918,4 +918,151 @@ Java_com_optimize_opencldemo_MainActivity_CreateProgram(JNIEnv *env, jobject thi
     }
 
     LOGE("build program success.");
+}
+
+void DataInit(cl_uchar *p_data, int width, int height) {
+    cl_uchar cnt = 0;
+    for (int i = 0; i < width * height; i++) {
+        *p_data = cnt;
+        cnt++;
+        p_data++;
+    }
+}
+
+void CheckClStatus(cl_int ret, const char *failure_msg) {
+    if (ret != CL_SUCCESS) {
+        LOGE("Error %d with %s\n", ret, failure_msg);
+    }
+}
+
+
+cl_command_queue CreateCommandQueue(cl_context context, cl_device_id device) {
+    cl_command_queue_properties queue_prop[] = {CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0};
+    cl_command_queue command_queue = nullptr;
+    command_queue = clCreateCommandQueueWithProperties(context, device, queue_prop, nullptr);
+    if (nullptr == command_queue) {
+        printf("create command queue failed.\n");
+    }
+    return command_queue;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_optimize_opencldemo_MainActivity_CreateKernel(JNIEnv *env, jobject thiz) {
+    cl_device_id device;
+    cl_context context = CreateContext(&device);
+    if (nullptr == context) {
+        LOGE("Create Context Failed!");
+    }
+
+    cl_command_queue command_queue = CreateCommandQueue(context, device);
+    if (nullptr == command_queue) {
+        LOGE("MainError:Create CommandQueue Failed!");
+    }
+
+    std::string source = ClReadString(
+            "/data/user/0/com.optimize.opencldemo/app_clkernels/opencl_add_kernel.cl");
+
+    char *cl_str = (char *) source.c_str();
+    size_t length = source.size();
+
+    cl_int err = CL_SUCCESS;
+    cl_program kernelClProgram = clCreateProgramWithSource(context, 1,
+                                                           (const char **) &cl_str, &length, &err);
+
+    const char options[] = "";
+    err = clBuildProgram(kernelClProgram, 1, &device, nullptr, nullptr, nullptr);
+    if (err != CL_SUCCESS) {
+        LOGE("build program fail.");
+        char *buffer;
+        size_t logsize;
+        err = clGetProgramBuildInfo(kernelClProgram, device, CL_PROGRAM_BUILD_LOG, 0, nullptr,
+                                    &logsize);
+        buffer = static_cast<char *>(malloc(logsize * sizeof(char)));
+        err = clGetProgramBuildInfo(kernelClProgram, device, CL_PROGRAM_BUILD_LOG, logsize, buffer,
+                                    nullptr);
+        LOGE("build program error log: %s", buffer);
+        free(buffer);
+    }
+
+    LOGE("build program success.");
+
+    cl_kernel kernel;
+
+    kernel = clCreateKernel(kernelClProgram, "Gauss3x3u8c1Buffer", &err);
+
+    if (err != CL_SUCCESS) {
+        LOGE("create kernel failed.");
+    }
+    LOGE("create kernel success.");
+
+    size_t max_work_group_size;
+    size_t perferred_work_group_size_multiple;
+    err = clGetKernelWorkGroupInfo(kernel, device, CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t),
+                                   &max_work_group_size, nullptr);
+    err |= clGetKernelWorkGroupInfo(kernel, device, CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,
+                                    sizeof(size_t), &perferred_work_group_size_multiple, nullptr);
+    if (err != CL_SUCCESS) {
+        LOGE("Get kernel info failed.");
+    }
+    LOGE("Kernel Gauss3x3u8c1Buffer max workgroup size=%zu.", max_work_group_size);
+    LOGE("Kernel Gauss3x3u8c1Buffer perferred workgroup size multiple=%zu.",
+         perferred_work_group_size_multiple);
+
+
+    const int c_loop_count = 30;
+
+    int width = 4096;
+    int height = 4096;
+    int istride = width;
+    int ostride = width;
+    cl_uint buffer_size_in_bytes;
+    buffer_size_in_bytes = width * height * sizeof(cl_uchar);
+    auto host_src_matrix = (cl_uchar *) malloc(buffer_size_in_bytes);
+    auto host_gaussian_matrix = (cl_uchar *) malloc(buffer_size_in_bytes);
+    auto device_gaussian_matrix = (cl_uchar *) malloc(buffer_size_in_bytes);
+    memset(device_gaussian_matrix, 0, buffer_size_in_bytes);
+    DataInit(host_src_matrix, width, height);
+
+    cl_mem buffer_src;
+    cl_mem buffer_dst;
+    buffer_src = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                buffer_size_in_bytes, host_src_matrix, &err);
+    CheckClStatus(err, "Create src buffer");
+    buffer_dst = clCreateBuffer(context, CL_MEM_WRITE_ONLY, buffer_size_in_bytes, nullptr, &err);
+    CheckClStatus(err, "Create dst buffer");
+
+    err = clSetKernelArg(kernel, 0, sizeof(buffer_src), &buffer_src);
+    err |= clSetKernelArg(kernel, 1, sizeof(height), &height);
+    err |= clSetKernelArg(kernel, 2, sizeof(width), &width);
+    err |= clSetKernelArg(kernel, 3, sizeof(istride), &istride);
+    err |= clSetKernelArg(kernel, 4, sizeof(ostride), &ostride);
+    err |= clSetKernelArg(kernel, 5, sizeof(buffer_dst), &buffer_dst);
+    CheckClStatus(err, "Set Kernel Arg");
+
+    size_t local_work_size[3];
+    local_work_size[0] = 16;
+    local_work_size[1] = 16;
+    local_work_size[2] = 0;
+
+    int cl_process_col = ((width - 2) >> 2) - 1;
+    int cl_process_row = height;
+    int remain_col_index = cl_process_col << 2;
+//    size_t global_work_size[2] = {(size_t) (cl_process_col), (size_t) (cl_process_row)};
+    size_t global_work_size[2] = {2048, 1024};
+
+//    size_t global_work_size[2] = {1022, 4096};
+
+    LOGE("global_work_size=(%zu,%zu).", global_work_size[0], global_work_size[1]);
+    LOGE("local_work_size=(%zu,%zu).", local_work_size[0], local_work_size[1]);
+    cl_event kernel_event = nullptr;
+    for (int i = 0; i < c_loop_count; i++) {
+        err = clEnqueueNDRangeKernel(command_queue, kernel, 2, nullptr, global_work_size,
+                                     local_work_size, 0, nullptr, &kernel_event);
+        CheckClStatus(err, "ClEnqueueNDRangeKernel");
+
+        err = clWaitForEvents(1, &kernel_event);
+        CheckClStatus(err, "ClWaitForEvents");
+        LOGE("ClEnqueueNDRangeKernel success. i =%d", i);
+    }
 }

@@ -76,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
         CreateContext();
         CreateCommandQueue();
         CreateProgram();
+        CreateKernel();
     }
 
     public native void ReadPlatform();
@@ -83,4 +84,5 @@ public class MainActivity extends AppCompatActivity {
     public native void CreateContext();
     public native void CreateCommandQueue();
     public native void CreateProgram();
+    public native void CreateKernel();
 }
